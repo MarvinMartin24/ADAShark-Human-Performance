@@ -4,10 +4,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
 from typing import List
+import fire
 
 path = "data/"
-random.seed(10)
-
 
 def _input(message: str):
     """ Retreive user input only if correct
@@ -22,7 +21,7 @@ def _input(message: str):
                     return res
                 return 1 if res == "y" else 0
             else:
-                print("Wrong input, use y or n.")
+                print("Wrong input, use y or n or stop.")
         except:
             pass
 
@@ -73,12 +72,17 @@ def metrics(preds: List, labels: List) -> str:
         round(f2, 3) * 100
     )
 
-if __name__ == '__main__':
+def main(assistance: bool = False):
     # Get Iamges
     images = []
     for i, vid in enumerate(os.listdir(path)):
         if (".png" in vid or ".jpg" in vid or ".jepg" in vid)and not "._" in vid:
             images.append(os.path.join(path, vid))
+
+    if assistance:
+        random.seed(99)
+    else:
+        random.seed(10)
 
     # Select randomly 150 images (seed makes it repeatable)
     selected_images = random.sample(images, 150)
@@ -86,8 +90,10 @@ if __name__ == '__main__':
     preds = []
     human_labels = []
     labels = []
+    traces = []
 
     for i, selected_image in enumerate(selected_images):
+        
         img = Image.open(selected_image)
         img = np.asarray(img)
         plt.figure(figsize = (13,8))
@@ -95,15 +101,36 @@ if __name__ == '__main__':
         plt.tight_layout()
         plt.imshow(img, interpolation='nearest')
         plt.draw()
-        plt.pause(2) # pause how many seconds
+        plt.pause(2)
         plt.close()
-        labels.append(int(selected_image.split("_")[-3]))
-        human_label = _input(f" {i}/{len(selected_images)} - Is there a shark? y/n/stop \n")
+        label = int(selected_image.split("_")[-3])
+        labels.append(label)
+        prob = selected_image.split('_')[-2]
+        if assistance == True:
+            message = f" {i+1}/{len(selected_images)} - Is there a shark? y/n/stop ({prob})\n"
+            output_file = "round_2_metrics.txt"
+        else:
+            message = f" {i+1}/{len(selected_images)} - Is there a shark? y/n/stop \n"
+            output_file = "round_1_metrics.txt"
+
+        human_label = _input(message)
         if human_label != "stop":
             human_labels.append(int(human_label))
         else:
             break
-        preds.append(int(selected_image.split("_")[-1].split(".")[0]))
+        pred_bin = int(selected_image.split("_")[-1].split(".")[0])
+        preds.append(pred_bin)
+        traces.append({
+            "img": selected_image,
+            "label": label,
+            "human": human_label,
+            "DACNN": (prob, pred_bin)
+        })
 
-    print("DACNN Metrics:", metrics(preds, labels))
-    print("Human Metrics:", metrics(human_labels, labels))
+    with open(output_file, 'w') as f:
+        f.write(f"DACNN Metrics: {metrics(preds, labels)}\nHuman Metrics {metrics(human_labels, labels)}\n")
+        f.write(f"Trace: {traces}")
+
+if __name__ == '__main__':
+    fire.Fire(main)
+    
