@@ -9,9 +9,9 @@ import fire
 path = "data/"
 
 def _input(message: str):
-    """ Retreive user input only if correct
+    """ Retrieve user input only if correct
     Args:
-        Message (str): Message displayed to user.
+        message (str): Message displayed to the user.
     """
     while True:
         try:
@@ -34,7 +34,7 @@ def fbeta_score(precision: float, recall: float, beta: float) -> float:
     Returns:
         (float) Fbeta score.
     """
-    return (1 + np.square(beta)) / ((np.square(beta) / recall) + (1 /precision))
+    return (1 + np.square(beta)) / ((np.square(beta) / recall) + (1 / precision))
 
 def metrics(preds: List, labels: List) -> str:
     """ Compute metrics including Accuracy, Precision, Recall, and F2 score.
@@ -43,9 +43,9 @@ def metrics(preds: List, labels: List) -> str:
         recall (float)
         beta (float)
     Returns:
-        (str) "Accuracy: X%,Precision: X%, Recall: X%, F2 Score: X%",
+        (str) "Accuracy: X%, Precision: X%, Recall: X%, F2 Score: X%",
     """
-    d = {"TP":0, "TN":0, "FP":0,"FN":0}
+    d = {"TP": 0, "TN": 0, "FP": 0, "FN": 0}
     for pred, label in zip(preds, labels):
         if (pred, label) == (1, 1):
             d['TP'] += 1
@@ -63,20 +63,20 @@ def metrics(preds: List, labels: List) -> str:
 
     return (
         "Accuracy: ",
-        round(acc, 3) * 100 ,
-        ",Precision: ",
+        round(acc, 3) * 100,
+        ", Precision: ",
         round(precision, 3) * 100,
-        ",Recall: ",
-         round(recall, 3) * 100,
-        ",F2 Score: ",
+        ", Recall: ",
+        round(recall, 3) * 100,
+        ", F2 Score: ",
         round(f2, 3) * 100
     )
 
 def main(assistance: bool = False):
-    # Get Iamges
+    # Get images
     images = []
     for i, vid in enumerate(os.listdir(path)):
-        if (".png" in vid or ".jpg" in vid or ".jepg" in vid)and not "._" in vid:
+        if (".png" in vid or ".jpg" in vid or ".jpeg" in vid) and not "._" in vid:
             images.append(os.path.join(path, vid))
 
     if assistance:
@@ -93,24 +93,38 @@ def main(assistance: bool = False):
     traces = []
 
     for i, selected_image in enumerate(selected_images):
-        
+        prob = selected_image.split('_')[-2]
+
+        if assistance:
+            # Display black frame for 2 seconds
+            plt.figure(figsize=(13, 8))
+            plt.axis('off')
+            plt.tight_layout()
+            plt.imshow(np.zeros((100, 100, 3), dtype=np.uint8))
+            plt.text(50, 50, f"Shark Probabilty: {prob}%", fontsize=24, color='white', ha='center', va='center')
+            plt.draw()
+            plt.pause(2)
+            plt.close()
+
         img = Image.open(selected_image)
         img = np.asarray(img)
-        plt.figure(figsize = (13,8))
+        plt.figure(figsize=(13, 8))
         plt.axis('off')
         plt.tight_layout()
         plt.imshow(img, interpolation='nearest')
+        if assistance:
+            plt.text(10, 20, f"Prob: {prob}%", fontsize=12, color='white', ha='left', va='top')
         plt.draw()
         plt.pause(2)
         plt.close()
+
         label = int(selected_image.split("_")[-3])
         labels.append(label)
-        prob = selected_image.split('_')[-2]
-        if assistance == True:
-            message = f" {i+1}/{len(selected_images)} - Is there a shark? y/n/stop ({prob})\n"
+        if assistance:
+            message = f" {i + 1}/{len(selected_images)} - Is there a shark? y/n/stop ({prob}%)\n"
             output_file = "round_2_metrics.txt"
         else:
-            message = f" {i+1}/{len(selected_images)} - Is there a shark? y/n/stop \n"
+            message = f" {i + 1}/{len(selected_images)} - Is there a shark? y/n/stop \n"
             output_file = "round_1_metrics.txt"
 
         human_label = _input(message)
@@ -131,6 +145,6 @@ def main(assistance: bool = False):
         f.write(f"DACNN Metrics: {metrics(preds, labels)}\nHuman Metrics {metrics(human_labels, labels)}\n")
         f.write(f"Trace: {traces}")
 
+
 if __name__ == '__main__':
     fire.Fire(main)
-    
